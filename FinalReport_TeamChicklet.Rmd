@@ -1,0 +1,741 @@
+---
+title:
+output:
+  html_document:
+    df_print: paged
+---
+
+
+![](Evans_Logo.png)
+
+# Visualizing Gender Inequality and Development
+### Team GGChicklet | Final Report
+### Winter 2020
+
+In this report, **we use visual analytics to examine the relationship between gender inequality and human development**, as measured by the Gender Inequality Index (GII) and Human Development Index (HDI). 
+
+Our overarching research question is: *What is the relationship between gender inequality and human development?*
+
+This report will share the process of exploring this research question, by completing the following steps:
+
+* Understanding our data (observable and latent variables)
+* Looking at trends in GII and HDI over time
+* Examining variation in GII and HDI by region
+* Comparing country GII and HDI scores to see the relationships
+* Using spatial analysis to see geographical patterns
+
+## Data
+We begin with a quick overview of our data. We used the following two databases from the UNDP.
+
+**Gender Inequality Index (GII)**
+
+A brief overview of the GII (UNDP, 2019):
+
+* Shows loss in potential human development due to disparity between female & male achievements
+* Three dimensions: reflects how women are disadvantaged in these dimensions
+* Ranges between 0 and 1: closer to 1 = higher inequalities between women and men; closer to 0 = lower inequalities between women and men
+
+![](GII.png)
+
+
+**Human Development Index (HDI)**
+
+A brief overview of the HDI (UNDP, 2019):
+
+* Created to emphasize that people are the ultimate criteria for development, not economic growth
+* Goal of promoting policy discussions (e.g., why countries with same GNI have different HDI)
+* Summary (mean) measure of: a long and healthy life, knowledge, and standard of living
+* Closer to 1 = higher levels of human development; closer to 0 = lower levels of human development
+
+![](HDI.png)
+
+```{r include=FALSE}
+#Loading Data
+library (readr)
+
+urlfile="https://github.com/CarlyJ25/543GroupProject/raw/master/HDI_and_GII_final_csv_nomissing.csv"
+
+hdi_gii<-read.csv(urlfile,stringsAsFactors = F)
+```
+```{r include=FALSE}
+saveRDS(hdi_gii, file = "hdi_gii.rds")
+```
+```{r include=FALSE}
+str(hdi_gii)
+```
+```{r include=FALSE}
+NewNames=c("hdi_rank","country","region","hdi","life_exp","exp_yrs_school","mean_yrs_school","gni_per_cap","gii","gii_rank","maternal_mortality","teen_birth_rate","women_par_seats","female_ed_rate","male_ed_rate","female_labor_force","male_labor_force")
+names(hdi_gii)=NewNames
+```
+```{r include=FALSE}
+names(hdi_gii)
+```
+```{r include=FALSE}
+#cleaning
+gsub(",","",hdi_gii$gni_per_cap)
+hdi_gii$gni_per_cap=gsub(",","",hdi_gii$gni_per_cap)
+hdi_gii$gni_per_cap=as.numeric(hdi_gii$gni_per_cap)
+hdi_gii$maternal_mortality=gsub(",","",hdi_gii$maternal_mortality)
+hdi_gii$maternal_mortality=as.numeric(hdi_gii$maternal_mortality)
+# scaling - commented out
+myVars=c('life_exp','exp_yrs_school','mean_yrs_school','gni_per_cap')
+summary(hdi_gii[,myVars])
+# hdi_gii[,myVars]=scale(hdi_gii[,myVars])
+str(hdi_gii)
+```
+
+## Examining Observable Variables
+As GII and HDI are both composite indices, we began by examining the observable variables that constitute both indices. We used box plots to visualize these variables by region, as shown below.
+
+
+```{r include=FALSE}
+gii_vars=c('maternal_mortality','teen_birth_rate','women_par_seats','female_ed_rate', 'male_ed_rate', 'female_labor_force', 'male_labor_force')
+summary(hdi_gii[,gii_vars])
+```
+
+
+```{r include=FALSE}
+library(ggpubr)
+library(hrbrthemes)
+
+base1=ggplot(data=hdi_gii, aes(x=region, y=maternal_mortality))
+box_maternal_mortality = base1 + geom_boxplot() + #theme_ipsum_rc()
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("Maternal Mortality Rate") + theme(axis.title.y=element_text(hjust=0.5)) + geom_boxplot(alpha=0.2)
+
+base2=ggplot(data=hdi_gii, aes(x=region, y=teen_birth_rate))
+box_teen_birth_rate = base2 + geom_boxplot() + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("Teen Birth Rate") + theme(axis.title.y=element_text(hjust=0.5))
+
+base3=ggplot(data=hdi_gii, aes(x=region, y=women_par_seats))
+box_women_par_seats = base3 + geom_boxplot()  + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("% of Parliament Seats Held by Women") + theme(axis.title.y=element_text(hjust=0.5))
+
+base4=ggplot(data=hdi_gii, aes(x=region, y=female_ed_rate))
+box_female_ed_rate = base4 + geom_boxplot()  + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("Female Educ. Rate") + theme(axis.title.y=element_text(hjust=0.5))
+
+base5=ggplot(data=hdi_gii, aes(x=region, y=male_ed_rate))
+box_male_ed_rate = base5 + geom_boxplot()  + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("Male Educ. Rate") + theme(axis.title.y=element_text(hjust=0.5))
+
+base6=ggplot(data=hdi_gii, aes(x=region, y=female_labor_force))
+box_female_labor_force = base6 + geom_boxplot()  + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("% Labor Force Female") + theme(axis.title.y=element_text(hjust=0.5))
+
+base7=ggplot(data=hdi_gii, aes(x=region, y=male_labor_force))
+box_male_labor_force = base7 + geom_boxplot()  + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("% Labor Force Male") + theme(axis.title.y=element_text(hjust=0.5))
+```
+```{r echo=FALSE}
+multi1 = ggarrange(box_maternal_mortality,box_teen_birth_rate,box_women_par_seats, nrow=1)
+multi_f = annotate_figure(multi1, top = text_grob("How Do GII Observables Look by Region? (I)"), bottom = text_grob("Data Source: UNDP", hjust=1, x=1, size=8))
+multi_f
+```
+
+
+```{r echo=FALSE}
+multi2 = ggarrange(box_female_ed_rate,box_male_ed_rate,box_female_labor_force, box_male_labor_force)
+multi_f2 = annotate_figure(multi2, top = text_grob("How Do GII Observables Look by Region? (II)"), bottom = text_grob("Data Source: UNDP", hjust=1, x=1, size=8))
+multi_f2
+```
+
+
+These plots show significant variation in GII observable variables across regions, with North America and Europe & Central Asia faring better on most of these observables while South Asia and Sub-Saharan Africa fare worse. However, it is interesting to note how the percentage of parliament seats held by women is more clustered within a smaller range than other variables, with the vast majority of countries falling below 30%.
+
+
+```{r include=FALSE}
+hdiVars=c('life_exp','exp_yrs_school','mean_yrs_school','gni_per_cap')
+summary(hdi_gii[,hdiVars])
+```
+```{r include=FALSE}
+base8=ggplot(data=hdi_gii, aes(x=region, y=life_exp))
+box_life_exp = base8 + geom_boxplot()  + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("Life Expectancy") + theme(axis.title.y=element_text(hjust=0.5))
+
+base9=ggplot(data=hdi_gii, aes(x=region, y=exp_yrs_school))
+box_exp_yrs_school = base9 + geom_boxplot()  + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("Expected Years of School") + theme(axis.title.y=element_text(hjust=0.5))
+
+base10=ggplot(data=hdi_gii, aes(x=region, y=mean_yrs_school))
+box_mean_yrs_school = base10 + geom_boxplot()  + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("Mean Years of School") + theme(axis.title.y=element_text(hjust=0.5))
+
+base11=ggplot(data=hdi_gii, aes(x=region, y=gni_per_cap))
+box_gni_per_cap = base11 + geom_boxplot()  + #theme_ipsum_rc() 
+theme(axis.text.x = element_text(angle = 45, hjust=1), axis.title.x = element_blank()) + ylab("GNI Per Capita") + theme(axis.title.y=element_text(hjust=0.5))
+```
+
+```{r echo=FALSE}
+multi3 = ggarrange(box_life_exp,box_gni_per_cap,box_exp_yrs_school,box_mean_yrs_school)
+multi_f3 = annotate_figure(multi3, top = text_grob("How Do HDI Observables Look by Region?"), bottom = text_grob("Data Source: UNDP", hjust=1, x=1, size=8))
+multi_f3
+```
+
+Here, it is also interesting to see the variation accross regions for the different indicators. We see similar patterns by region as above. However, here, it is interesting to see that the *expected* years of schooling are at around 12-15 for all regions, but there is greater variety in the actual *mean* years of schooling.
+
+
+## Assessing the GII and HDI Composite Indices
+
+In addition to looking at the observable variables individually, we wanted to assess the overall indices. GII and HDI are composite indices - that is, they are each latent variables that are comprised of a set of constituent observable variables that we just discussed. So, we utilized confirmatory factor analysis (CFA), an algebraic approach, to compare latent variables we created for GII and HDI with the existing GII and HDI indices. The results are below.
+
+```{r include=FALSE}
+library(lavaan)
+
+modelNUM_gii='
+gii=~ teen_birth_rate + women_par_seats + female_ed_rate + male_ed_rate + female_labor_force + male_labor_force
+'
+
+fitNUM_gii<-cfa(modelNUM_gii, data = hdi_gii)
+indexCFA_gii=lavPredict(fitNUM_gii)
+```
+```{r include=FALSE}
+library(BBmisc)
+indexCFANorm_gii=normalize(indexCFA_gii, 
+                       method = "range", 
+                       margin=2, # by column
+                       range = c(0, 1))
+```
+```{r include=FALSE}
+tail(indexCFANorm_gii)
+```
+```{r include=FALSE}
+head(indexCFANorm_gii)
+```
+```{r include=FALSE}
+#Save the index
+hdi_gii$indexCFANorm_gii=indexCFANorm_gii
+```
+```{r include=FALSE}
+base_index = ggplot(hdi_gii, aes(x=gii,y=indexCFANorm_gii)) 
+plot1 = base_index +  geom_point() + theme_ipsum_rc()
+plot1
+```
+```{r include=FALSE}
+titleText_indexgii='How does the GII Index Compare to Our CFA Index?'
+sourceText = 'Source: UNDP'
+
+plot2 = plot1 + labs(title=titleText_indexgii,
+                     x = "Original GII Index", 
+                     y = "CFA GII Index",
+                     caption = sourceText)
+plot2
+```
+```{r echo=FALSE}
+plot3 = plot2 + theme(plot.title = element_text(hjust = 0.5), axis.title.y = element_text(hjust = 0.5, size = 13), axis.title.x = element_text(hjust = 0.5, size = 13)) + scale_x_continuous(breaks=c(0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00), limits = c(0, 1.00)) 
+
+plot3
+```
+
+```{r include=FALSE}
+modelNUM2='
+hdi_index=~ life_exp + exp_yrs_school + mean_yrs_school + gni_per_cap
+'
+
+fitNUM<-cfa(modelNUM2, data = hdi_gii)
+indexCFA2=lavPredict(fitNUM)
+```
+```{r include=FALSE}
+indexCFANorm2=normalize(indexCFA2, 
+                       method = "range", 
+                       margin=2, # by column
+                       range = c(0, 1))
+```
+```{r include=FALSE}
+tail(indexCFANorm2)
+```
+```{r include=FALSE}
+head(indexCFANorm2)
+```
+```{r include=FALSE}
+## SAVE the index:
+hdi_gii$indexCFANorm2=indexCFANorm2
+```
+```{r include=FALSE}
+plot(hdi_gii$hdi, hdi_gii$indexCFANorm2)
+```
+```{r include=FALSE}
+base_indexhdi = ggplot(hdi_gii, aes(x=hdi,y=indexCFANorm2)) 
+plot4= base_indexhdi +  geom_point() + theme_ipsum_rc()
+plot4
+```
+```{r include=FALSE}
+titleText_indexhdi='How does the HDI Index Compare to Our CFA Index?'
+
+plot5 = plot4 + labs(title=titleText_indexhdi,
+                     x = "Original HDI Index", 
+                     y = "CFA HDI Index",
+                     caption = sourceText)
+plot5
+```
+```{r echo=FALSE}
+plot6 = plot5 + theme(plot.title = element_text(hjust = 0.5), axis.title.y = element_text(hjust = 0.5, size = 13), axis.title.x = element_text(hjust = 0.5, size = 13)) + scale_x_continuous(breaks=c(0.00, 0.25, 0.50, 0.75, 1.00), limits = c(0, 1.00)) 
+
+plot6
+```
+
+As we can see above, both true indices trend in the same direction as the indices we created with the CFA - though, interesting, more closely for HDI than GII.
+
+
+## Trends Over Time
+
+Having a more solid understanding of our variables, we next turned to looking at trends in GII and HDI over time to better understand the context.
+
+```{r include=FALSE}
+library (readr)
+
+urlfile_time="https://github.com/CarlyJ25/543GroupProject/raw/master/historical_gii_hdi_nomissing.csv"
+
+hdi_gii_time<-as.data.frame(read.csv(urlfile_time))
+```
+```{r include=FALSE}
+head(hdi_gii_time)
+```
+```{r include=FALSE}
+NewNames_time=c("Index","Country","Region","2010","2013","2015","2016","2017","2018")
+names(hdi_gii_time)=NewNames_time
+```
+```{r include=FALSE}
+names(hdi_gii_time)
+```
+```{r include=FALSE}
+str(hdi_gii_time)
+```
+```{r include=FALSE}
+hdi_gii_time$Country<-as.character(hdi_gii_time$Country)
+hdi_gii_time$Region<-as.character(hdi_gii_time$Region)
+hdi_gii_time$Index<-as.character(hdi_gii_time$Index)
+```
+```{r include=FALSE}
+str(hdi_gii_time)
+```
+```{r include=FALSE}
+head(hdi_gii_time)
+```
+
+```{r include=FALSE}
+aggregate(data=hdi_gii_time[hdi_gii_time$Index=='GII',][,-c(1:2)], .~Region,mean)
+```
+```{r include=FALSE}
+GIImean=data.frame(aggregate(data=hdi_gii_time[hdi_gii_time$Index=='GII',][,-c(1:2)], .~Region,mean))
+NewNames_time2=c("Region","2010","2013","2015","2016","2017","2018")
+names(GIImean)=NewNames_time2
+head(GIImean)
+```
+```{r include=FALSE}
+library(dplyr)
+library(tidyr)
+```
+```{r include=FALSE}
+GIImean_pivot=GIImean %>%
+  pivot_longer(-Region, names_to="year",values_to="gii")
+head(GIImean_pivot)
+```
+```{r include=FALSE}
+GIImean_pivot$year<-as.Date(GIImean_pivot$year,format="%Y")
+GIImean_pivot$year <- as.numeric(format(GIImean_pivot$year, '%Y'))
+str(GIImean_pivot)
+head(GIImean_pivot)
+```
+```{r include=FALSE}
+base_time = ggplot(data=GIImean_pivot,aes(x=year,y=gii,color=Region))
+plot1_time = base_time + geom_line(size=1.5)
+plot1_time
+```
+```{r include=FALSE}
+install.packages("devtools") 
+devtools::install_github("jakelawlor/PNWColors") 
+```
+```{r include=FALSE}
+library(PNWColors)
+color_palette = pnw_palette(name = "Sailboat", n = 7)
+```
+```{r include=FALSE}
+plot2_time = plot1_time + scale_color_manual(values = color_palette) + theme_ipsum_rc()
+plot2_time
+```
+```{r include=FALSE}
+titletext_time="How Has GII Changed Over Time?"
+```
+```{r include=FALSE}
+plot3_time = plot2_time + labs(title=titletext_time, caption=sourceText) + theme(plot.title = element_text(hjust = 0.5), axis.title.y = element_text(hjust = 0.5), axis.title.x = element_text(hjust = 0.5))
+plot3_time
+```
+```{r include=FALSE}
+plot4_time = plot3_time + 
+  ggrepel::geom_text_repel(data = filter(GIImean_pivot, year == max(year)),aes(label = Region),
+              nudge_x = 1,
+                  na.rm = TRUE) + 
+  coord_cartesian(clip = 'off') + 
+  scale_x_continuous(limits = c(2010, 2025), breaks = seq(2010, 2018, by = 2)) +
+  theme(legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+plot4_time
+```
+
+```{r echo=FALSE}
+plot5_time = plot4_time + labs(x = "Year", y = "GII Index") + theme(axis.title.y = element_text(hjust = 0.5, size=13), axis.title.x = element_text(hjust = 0.3, size=13))
+plot5_time
+```
+
+```{r include=FALSE}
+aggregate(data=hdi_gii_time[hdi_gii_time$Index=='HDI',][,-c(1:2)], .~Region,mean)
+```
+```{r include=FALSE}
+HDImean=data.frame(aggregate(data=hdi_gii_time[hdi_gii_time$Index=='HDI',][,-c(1:2)], .~Region,mean))
+NewNamesHDI=c("Region","2010","2013","2015","2016","2017","2018")
+names(HDImean)=NewNamesHDI
+head(HDImean)
+```
+```{r include=FALSE}
+HDImean_pivot=HDImean %>%
+  pivot_longer(-Region, names_to="year",values_to="hdi")
+head(HDImean_pivot)
+```
+```{r include=FALSE}
+HDImean_pivot$year<-as.Date(HDImean_pivot$year,format="%Y")
+HDImean_pivot$year <- as.numeric(format(HDImean_pivot$year, '%Y'))
+str(HDImean_pivot)
+```
+```{r include=FALSE}
+head(HDImean_pivot)
+```
+```{r include=FALSE}
+base2_time = ggplot(data=HDImean_pivot,aes(x=year,y=hdi,color=Region))
+plot6_time = base2_time + geom_line(size=1)
+plot6_time
+```
+```{r include=FALSE}
+plot7_time = plot6_time + scale_color_manual(values = color_palette) + theme_ipsum_rc()
+plot7_time
+```
+```{r include=FALSE}
+titletext_time2="How Has HDI Changed Over Time?"
+```
+```{r include=FALSE}
+plot8_time = plot7_time + labs(title=titletext_time2, caption=sourceText) + theme(plot.title = element_text(hjust = 0.5), axis.title.y = element_text(hjust = 0.5), axis.title.x = element_text(hjust = 0.5))
+plot8_time
+```
+```{r include=FALSE}
+plot9_time = plot8_time + 
+  ggrepel::geom_text_repel(data = filter(HDImean_pivot, year == max(year)),aes(label = Region),
+              nudge_x = 1,
+                  na.rm = TRUE) + 
+  coord_cartesian(clip = 'off') + 
+  scale_x_continuous(limits = c(2010, 2025), breaks = seq(2010, 2018, by = 2)) +
+  theme(legend.position = "none",
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+
+```
+```{r echo=FALSE}
+plot10_time = plot9_time + labs(x = "Year", y = "HDI Index") + theme(axis.title.y = element_text(hjust = 0.5, size=13), axis.title.x = element_text(hjust = 0.3, size=13))
+plot10_time
+```
+
+As we can see in the charts above, GII and HDI are trending in good directions. GII (or rates of gender inequality) are decreasing over time, whereas HDI is trending upward. Interesting, the decline in GII is a bit more varied than the increase in HDI. Still, overall, things are trending in a positive direction - though obviously not as quickly as we all would hope. And clearly, there are still significant disparities across regions - with Sub-Saharan Africa and South Asia faring worse and North America and Europe & Central Asia faring better.
+
+
+## Variation by Region 
+
+We next turn to examining the variation in GII and HDI by region more closely. We created low, medium, high, and very high categories for GII and HDI - using quartiles for GII and the standards set by UNDP for the latter. The results of this analysis are visualized below using stacked bar charts.
+
+```{r include=FALSE}
+library(PNWColors)
+library(ggchicklet)
+```
+```{r include=FALSE}
+summary(hdi_gii)
+```
+```{r include=FALSE}
+hdi_gii$hdi.group=cut(hdi_gii$hdi,
+                          breaks = c(0,0.5499,0.699,0.7999,1),
+                          labels = c("low","medium","high","very.high"))
+```
+```{r include=FALSE}
+(HDIbyregion=table(hdi_gii$hdi.group,hdi_gii$region))
+```
+```{r include=FALSE}
+(HDIbyregion_mgCol=prop.table(HDIbyregion,
+                            margin = 2))
+```
+```{r include=FALSE}
+HDIbyregionDF=as.data.frame(HDIbyregion)
+names(HDIbyregionDF)=c("hdi.group","region","counts")
+
+head(HDIbyregionDF)
+```
+```{r include=FALSE}
+HDIbyregionDF$pctCol=as.data.frame(HDIbyregion_mgCol)[,3]
+```
+```{r include=FALSE}
+head(HDIbyregionDF)
+```
+```{r include=FALSE}
+library(scales)# notice
+library(ggplot2)
+library(dplyr)
+
+base_bars=ggplot(data=HDIbyregionDF %>% filter(counts>0), aes(x=region,y=pctCol,fill=hdi.group))
+
+barStackPct1 = base_bars + geom_chicklet(color = "white")
+```
+```{r include=FALSE}
+color_palette2 = pnw_palette(name = "Sailboat", n = 4)
+
+barStackPct2 = barStackPct1 + scale_fill_manual(values = rev(color_palette2), name = "HDI Group", labels = c("Low", "Medium", "High", "Very High"))
+```
+```{r include=FALSE}
+library(hrbrthemes)
+barStackPct3= barStackPct2 + geom_text(size = 3,# check below:
+                             position = position_stack(vjust = 0.5, reverse = TRUE),
+                             aes(label=percent(pctCol))) + theme_ipsum_rc()
+```
+```{r include=FALSE}
+finalbar = barStackPct3 + theme(axis.text.x = element_text(size=7,angle = 45, hjust=1)) + theme(axis.title.y = element_blank(), axis.title.x = element_blank(), axis.text.x = element_text(size = 13))
+```
+```{r echo=FALSE}
+titleText_bar='Percent of Countries in Each HDI Group by Region'
+
+finalbar2 = finalbar + labs(title=titleText_bar, caption=sourceText) + theme(plot.title = element_text(hjust=0.5)) +  scale_y_continuous(labels=scales::percent) + guides(fill = guide_legend(reverse = TRUE))
+finalbar2
+```
+
+
+```{r include=FALSE}
+# GII Graph
+
+hdi_gii$gii_groups = cut(hdi_gii$gii,
+                                            breaks = c(0, 0.1745, 0.3680, 0.4988, 0.8340),
+                                            labels = c("Low", "Medium", "High", "Very High"))
+```
+```{r include=FALSE}
+(GIIbyregion=table(hdi_gii$gii_groups,hdi_gii$region))
+```
+```{r include=FALSE}
+(GIIbyregion_mgCol=prop.table(GIIbyregion,
+                            margin = 2))
+```
+```{r include=FALSE}
+GIIbyregionDF=as.data.frame(GIIbyregion)
+names(GIIbyregionDF)=c("gii_groups","region","counts")
+
+head(GIIbyregionDF)
+```
+```{r include=FALSE}
+GIIbyregionDF$pctCol=as.data.frame(GIIbyregion_mgCol)[,3]
+```
+```{r include=FALSE}
+head(GIIbyregionDF)
+```
+```{r include=FALSE}
+GIIbyregionDF_plotting <- GIIbyregionDF %>%
+  mutate(gii_groups_new = factor(gii_groups, levels = c("Low", "Medium", "High", "Very High"))) # change factor order manually to set legend order
+
+base_bars2=ggplot(data=GIIbyregionDF_plotting %>% filter(counts>0), aes(x=region,y=pctCol,fill=gii_groups))
+
+barStackPct4 = base_bars2 + geom_chicklet(color = "white")
+```
+```{r include=FALSE}
+barStackPct5 = barStackPct4 + scale_fill_manual(values = rev(color_palette2), name = "GII Group", labels = c("Low", "Medium", "High", "Very High"))
+```
+```{r include=FALSE}
+barStackPct6= barStackPct5 + geom_text(size = 3,# check below:
+                             position = position_stack(vjust = 0.5, reverse = TRUE),
+                             aes(label=percent(pctCol))) + theme_ipsum_rc()
+```
+```{r include=FALSE}
+finalbar3 = barStackPct6 + theme(axis.text.x = element_text(size=7,angle = 45, hjust=1)) + theme(axis.title.y = element_blank(), axis.title.x = element_blank(), axis.text.x = element_text(size = 13))
+```
+```{r echo=FALSE}
+titleText_bar2='Percent of Countries in Each GII Group by Region'
+
+finalbar4 = finalbar3 + labs(title=titleText_bar2, caption=sourceText) + theme(plot.title = element_text(hjust=0.5)) +  scale_y_continuous(labels=scales::percent) + guides(fill = guide_legend(reverse = TRUE))
+
+finalbar4
+```
+
+
+## The Relationship Between GII and HDI by Country
+
+Having a better understanding of the global context of GII and HDI, we next moved to directly answering our primary research question: *What is the relationship between GII and HDI?* We did this by comparing the two scores by country, using scatter plots to visualize this relationship.
+
+```{r include=FALSE}
+base = ggplot(hdi_gii, aes(x=hdi,y=gii)) 
+plot1= base + geom_point() 
+plot1
+```
+```{r include=FALSE}
+titleText='What is the Relationship Between GII and HDI?'
+sourceText='Source: UNDP'
+```
+```{r echo=FALSE}
+library(hexbin)
+scatp1 = base +  geom_hex(bins = 10)
+
+scatp2 = scatp1 + labs(title=titleText,
+                     x = "HDI Index", 
+                     y = "GII Index",
+                     caption = sourceText)
+scatp2 + scale_fill_distiller(palette ="YlGnBu",direction=1,name="Number") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5, face="bold"), axis.title.y = element_text(hjust = 0.5, size=13, face="bold"), axis.title.x = element_text(hjust = 0.5, size=13, face="bold"))
+```
+
+As you can see in this scatterplot - there is a clear trend between GII and HDI - with high GII scores being associated with low HDI scores and vice versa. You can also see how a greater number of countries have high levels of HDI and GII, as indicated by the legend showing that darker colors indicate a higher number of countries - which is encouraging.
+
+To understand this relationship between GII and HDI a bit better, we dove into some examples of specific countries with interesting relationships, as shown below.
+
+```{r include=FALSE}
+titleTexta='Which Countries Have the Expected Relationship?'
+subtitleTexta='High GII and Low HDI (upper left); Low GII and High HDI (lower right)'
+```
+```{r echo=FALSE}
+library(hexbin)
+library(ggrepel)
+scatp1 = base +  geom_hex(bins = 10)
+scatp2= scatp1 + geom_text_repel(aes(label=ifelse(gii>0.66 & hdi<0.5499 | gii<0.05 & hdi>0.7999, country, "")),segment.colour = "grey50", segment.size = 0.2, colour = "grey20", size = 2.8)
+
+scatp3 = scatp2 + labs(title=titleTexta, subtitle=subtitleTexta,
+                     x = "HDI Index", 
+                     y = "GII Index",
+                     caption = sourceText)
+scatp3 + scale_fill_distiller(palette ="YlGnBu",direction=1,name="Number") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5, face="bold"), plot.subtitle = element_text(hjust = 0.5),  axis.title.y = element_text(hjust = 0.5, size=13), axis.title.x = element_text(hjust = 0.5, size=13))
+```
+
+As shown in the graph above, we first looked at which countries have a more “expected” relationship between GII and HDI - that is, countries where the two are inversely related. In the upper left, we have countries with high GII and low HDI. Yemen sticks out as an interesting case, with the highest GII and still a low HDI, but relatively higher than other countries. Then, in the bottom right, we have your expected players of Sweden, Norway, Denmark, etc. - all with high HDI and low GII.
+
+```{r include=FALSE}
+titleTextc='Which Countries Have a More Unexpected Relationship?'
+subtitleTextc='Higher GII and Higher HDI'
+```
+```{r echo=FALSE}
+library(hexbin)
+scatp1 = base +  geom_hex(bins = 10)
+scatp2= scatp1 + geom_text_repel(aes(label=ifelse(gii>0.55 & hdi>0.55, country, "")), segment.colour = "grey50", segment.size = 0.2, colour = "grey20", size = 2.8)
+
+scatp3 = scatp2 + labs(title=titleTextc, subtitle=subtitleTextc,
+                     x = "HDI Index", 
+                     y = "GII Index",
+                     caption = sourceText)
+scatp3 + scale_fill_distiller(palette ="YlGnBu",direction=1,name="Number") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5, face="bold")) + theme(plot.subtitle = element_text(hjust = 0.5), axis.title.y = element_text(hjust = 0.5, size=13), axis.title.x = element_text(hjust = 0.5, size=13))
+```
+
+Next, we looked at countries with a more “unexpected” relationship between GII and HDI, by searching for some interesting cases. Above, we see countries with relatively higher levels of GII and HDI and, below, countries with relatively lower levels of GII and HDI. One interesting case is Rwanda, which is well known for having high gender equality - for example, its government is set up such that a certain percentage of its parliament members must be women - but its HDI is on the lower end.
+
+```{r include=FALSE}
+titleTextd='Which Countries Have a More Unexpected Relationship?'
+subtitleTextd='Lower GII and Lower HDI'
+```
+```{r echo=FALSE}
+library(hexbin)
+scatp1 = base +  geom_hex(bins = 10)
+scatp2= scatp1 + geom_text_repel(aes(label=ifelse(gii<0.55 & hdi<0.55, country, "")), segment.colour = "grey50", segment.size = 0.2, colour = "grey20", size = 2.8)
+
+scatp3 = scatp2 + labs(title=titleTextd, subtitle=subtitleTextd,
+                     x = "HDI Index", 
+                     y = "GII Index",
+                     caption = sourceText)
+scatp3 + scale_fill_distiller(palette ="YlGnBu",direction=1,name="Number") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5, face="bold")) + theme(plot.subtitle = element_text(hjust = 0.5), axis.title.y = element_text(hjust = 0.5, size=13), axis.title.x = element_text(hjust = 0.5, size=13))
+```
+
+Despite these interesting case, the relationship between GII and HDI overall seems quite clear: lower gender inequality is associated with higher levels of human development.
+
+
+## Spatial Analysis
+
+Finally, we used spatial analytis to visualize our GII and HDI categories by region on a global scale. The maps below provide a clear picture of the status of the world in terms of gender inequality and development, while also illustrating the relationship between these two variables around the world.
+
+```{r include=FALSE}
+library(tidyverse)
+library(rvest)
+library(magrittr)
+library(ggmap)
+library(maps)
+library(stringr)
+library(rnaturalearth)
+library(sf)
+library(hrbrthemes)
+library(PNWColors)
+```
+```{r include=FALSE}
+countries_sf = ne_download(scale = 50, type = "map_units", returnclass = "sf") %>% 
+  select(GEOUNIT, SUBUNIT)
+```
+```{r include=FALSE}
+country_name_check = hdi_gii %>%
+  select(country) %>%
+  left_join(countries_sf %>% select(GEOUNIT, SUBUNIT), by = c("country" = "GEOUNIT"))
+
+country_crosswalk = read_csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vTpf2Whmqy35miQ_q0KYDlxXvKVlo8EwkTRw7jtzAhVhBhP7hfS4lf5WQGc7ixl_Y7zgVPp1plk1VrK/pub?output=csv")
+
+countries_sf_new = countries_sf %>%
+  left_join(country_crosswalk, by = c("GEOUNIT" = "ne_name")) %>%
+  mutate(hdi_name = case_when(
+    GEOUNIT == "Brussels Capital Region" ~ "Belgium",
+    GEOUNIT == "Walloon Region" ~ "Belgium",
+    GEOUNIT == "Flemish Region" ~ "Belgium",
+    GEOUNIT == "England" ~ "United Kingdom",
+    GEOUNIT == "Wales" ~ "United Kingdom",
+    GEOUNIT == "Northern Ireland" ~ "United Kingdom",
+    GEOUNIT == "Scotland" ~ "United Kingdom",
+    GEOUNIT == "Antigua" ~ "Antigua and Barbuda",
+    GEOUNIT == "Barbuda" ~ "Antigua and Barbuda",
+    GEOUNIT == "Gaza" ~ "Palestine, State of",
+    GEOUNIT == "West Bank" ~ "Palestine, State of",
+    TRUE ~ hdi_name
+  ),
+      hdi_name = coalesce(hdi_name, GEOUNIT))
+
+df_to_map = countries_sf_new %>%
+  left_join(hdi_gii, by = c("hdi_name" = "country")) %>%
+  st_transform(crs = "+proj=moll") # equal earth projection http://strimas.com/gis/equal-earth/
+```
+```{r echo=FALSE}
+hdi_map_1 = ggplot(df_to_map, aes(fill = hdi.group)) +
+  geom_sf(color = "white", lwd = .3) +
+  theme_ipsum_rc() 
+  # theme(panel.grid.major = element_blank())
+```
+```{r echo=FALSE}
+color_palette_map <- pnw_palette(name = "Sailboat", n = 4)
+
+hdi_map_2 <- hdi_map_1 + scale_fill_manual(values = rev(color_palette_map), name = "HDI Group", labels = c("Low", "Medium", "High", "Very High"), na.value = "gray90", na.translate=FALSE) + guides(fill = guide_legend(reverse = TRUE))
+```
+```{r echo=FALSE}
+titleText_map = 'HDI Group by Country'
+sourceText_map = 'Source: UNDP
+White = N/A; data were not available'
+
+hdi_map_3 = hdi_map_2 + labs(title=titleText_map, caption=sourceText_map) + theme(plot.title = element_text(hjust=0.5))
+
+hdi_map_3
+```
+```{r echo=FALSE}
+gii_map_1 = ggplot(df_to_map, aes(fill = gii_groups)) +
+  geom_sf(color = "white", lwd = .3) +
+  theme_ipsum_rc() 
+  # theme(panel.grid.major = element_blank())
+```
+```{r echo=FALSE}
+gii_map_2 <- gii_map_1 + scale_fill_manual(values = rev(color_palette_map), name = "GII Group", labels = c("Low", "Medium", "High", "Very High"), na.value = "gray90", na.translate=FALSE) + guides(fill = guide_legend(reverse = TRUE))
+```
+```{r echo=FALSE}
+titleText2_map = 'GII Group by Country'
+
+gii_map_3 <- gii_map_2 + labs(title=titleText2_map, caption=sourceText_map) + theme(plot.title = element_text(hjust=0.5))
+
+gii_map_3
+```
+
+
+## Conclusion
+
+In summary, despite the significant diversity in countries throughout the world, our analysis revealed that there seems to be a clear relationship between gender inequality and human development. While countries with higher gender inequality are associated with lower human development, countries with lower gender inequality tend to have higher levels of human development. Whether or not this relationship is causal is beyond the scope of this analysis. However, our analysis suggests an association between gender equality and development throughout the world.
+
+
+## References
+
+UNDP (2019). Gender Inequality Index (GII). Retrieved from http://hdr.undp.org/en/content/gender-inequality-index-gii
+
+UNDP (2019). Human Development Index (HDI). Retrieved from http://hdr.undp.org/en/content/human-development-index-hdi
